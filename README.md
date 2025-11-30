@@ -71,6 +71,34 @@ pnpm build
 pnpm test
 ```
 
+## Quick Test (Browser with Freighter)
+
+The easiest way to test everything:
+
+```bash
+# 1. Start facilitator (Terminal 1)
+cd packages/facilitator
+pnpm dev
+
+# 2. Start example server (Terminal 2)
+cd examples/server-example
+pnpm install  # First time only
+pnpm start
+
+# 3. Open in browser
+# Visit: http://localhost:3000
+# Click any protected endpoint
+# Connect Freighter wallet and pay!
+```
+
+**Payment Address:** `GC63PSERYMUUUJKYSSFQ7FKRAU5UPIP3XUC6X7DLMZUB7SSCPW5BSIRT`
+
+See [examples/README.md](./examples/README.md) for more details.
+
+## Testing
+
+See [TESTING.md](./TESTING.md) for comprehensive testing guide.
+
 ## Architecture
 
 ```

@@ -49,6 +49,8 @@ export interface PaywallConfig {
   appName?: string;
   /** Application logo URL */
   appLogo?: string;
+  /** Enable debug mode with logging panel */
+  debug?: boolean;
 }
 
 /**
