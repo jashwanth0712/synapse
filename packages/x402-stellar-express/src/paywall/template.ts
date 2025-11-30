@@ -36,8 +36,8 @@ export function getPaywallHtml(options: GetPaywallHtmlOptions): string {
   const appName = config?.appName || "Protected Content";
   const debugMode = config?.debug === true;
 
-  // Stellar logo SVG (inline)
-  const stellarLogoSvg = `<svg viewBox="0 0 100 100" class="paywall-logo"><circle cx="50" cy="50" r="48" fill="url(#stellarGradient)"/><defs><linearGradient id="stellarGradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#7c3aed"/><stop offset="100%" style="stop-color:#3b82f6"/></linearGradient></defs><text x="50" y="62" text-anchor="middle" fill="white" font-size="32" font-weight="bold">✦</text></svg>`;
+  // Stellar logo SVG (minimal monochrome)
+  const stellarLogoSvg = `<svg viewBox="0 0 100 100" class="paywall-logo"><circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="8"/><path d="M50 20 L50 80 M20 50 L80 50" stroke="currentColor" stroke-width="8" stroke-linecap="round"/><circle cx="50" cy="50" r="15" fill="currentColor"/></svg>`;
 
   // Network configuration
   const networkPassphrase = isTestnet
@@ -447,17 +447,17 @@ export function getPaywallHtml(options: GetPaywallHtmlOptions): string {
               container.innerHTML = 
                 '<div class="paywall-header">' +
                   logoHtml +
-                  '<h1 class="paywall-title">✅ Payment Successful!</h1>' +
-                  '<p class="paywall-subtitle">Access granted to ' + description + '</p>' +
+                  '<h1 class="paywall-title">PAYMENT SUCCESSFUL</h1>' +
+                  '<p class="paywall-subtitle">ACCESS GRANTED TO ' + description.toUpperCase() + '</p>' +
                 '</div>' +
-                '<div style="background: var(--bg-card); border-radius: 12px; padding: 24px; margin-top: 24px; border: 1px solid var(--border-color);">' +
-                  '<h2 style="font-size: 18px; margin-bottom: 16px; color: var(--text-primary);">Response Data:</h2>' +
-                  '<pre style="background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; overflow-x: auto; color: var(--text-primary); font-size: 14px; line-height: 1.6; margin: 0;">' + 
+                '<div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 24px; margin-top: 24px;">' +
+                  '<h2 style="font-size: 14px; margin-bottom: 16px; color: var(--text-primary); text-transform: uppercase;">Response Data:</h2>' +
+                  '<pre style="background: var(--bg-dark); padding: 16px; border: 1px dashed var(--border-color); overflow-x: auto; color: var(--text-primary); font-size: 12px; line-height: 1.6; margin: 0; font-family: \'Courier New\', monospace;">' + 
                     jsonData +
                   '</pre>' +
                 '</div>' +
                 '<div style="margin-top: 24px; text-align: center;">' +
-                  '<a href="' + currentUrl + '" style="color: var(--stellar-purple); text-decoration: none; font-size: 14px;">← Back to paywall</a>' +
+                  '<a href="' + currentUrl + '" style="color: var(--text-secondary); text-decoration: none; font-size: 12px; text-transform: uppercase;">[ Return to Content ]</a>' +
                 '</div>';
             }
           } else {
@@ -468,10 +468,10 @@ export function getPaywallHtml(options: GetPaywallHtmlOptions): string {
               const escapedText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
               container.innerHTML = 
                 '<div class="paywall-header">' +
-                  '<h1 class="paywall-title">✅ Payment Successful!</h1>' +
+                  '<h1 class="paywall-title">PAYMENT SUCCESSFUL</h1>' +
                 '</div>' +
-                '<div style="background: var(--bg-card); border-radius: 12px; padding: 24px; margin-top: 24px;">' +
-                  '<pre style="background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; overflow-x: auto; color: var(--text-primary); font-size: 14px; white-space: pre-wrap;">' + escapedText + '</pre>' +
+                '<div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 24px; margin-top: 24px;">' +
+                  '<pre style="background: var(--bg-dark); padding: 16px; border: 1px dashed var(--border-color); overflow-x: auto; color: var(--text-primary); font-size: 12px; white-space: pre-wrap; font-family: \'Courier New\', monospace;">' + escapedText + '</pre>' +
                 '</div>';
             }
           }
