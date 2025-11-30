@@ -452,7 +452,7 @@ export function getPaywallHtml(options: GetPaywallHtmlOptions): string {
                 '</div>' +
                 '<div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 24px; margin-top: 24px;">' +
                   '<h2 style="font-size: 14px; margin-bottom: 16px; color: var(--text-primary); text-transform: uppercase;">Response Data:</h2>' +
-                  '<pre style="background: var(--bg-dark); padding: 16px; border: 1px dashed var(--border-color); overflow-x: auto; color: var(--text-primary); font-size: 12px; line-height: 1.6; margin: 0; font-family: \'Courier New\', monospace;">' + 
+                  '<pre style="background: var(--bg-dark); padding: 16px; border: 1px dashed var(--border-color); overflow-x: auto; color: var(--text-primary); font-size: 12px; line-height: 1.6; margin: 0; font-family: monospace;">' + 
                     jsonData +
                   '</pre>' +
                 '</div>' +
@@ -471,7 +471,7 @@ export function getPaywallHtml(options: GetPaywallHtmlOptions): string {
                   '<h1 class="paywall-title">PAYMENT SUCCESSFUL</h1>' +
                 '</div>' +
                 '<div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 24px; margin-top: 24px;">' +
-                  '<pre style="background: var(--bg-dark); padding: 16px; border: 1px dashed var(--border-color); overflow-x: auto; color: var(--text-primary); font-size: 12px; white-space: pre-wrap; font-family: \'Courier New\', monospace;">' + escapedText + '</pre>' +
+                  '<pre style="background: var(--bg-dark); padding: 16px; border: 1px dashed var(--border-color); overflow-x: auto; color: var(--text-primary); font-size: 12px; white-space: pre-wrap; font-family: monospace;">' + escapedText + '</pre>' +
                 '</div>';
             }
           }
