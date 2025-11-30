@@ -103,15 +103,14 @@ export function getPaywallHtml(options: GetPaywallHtmlOptions): string {
       Cancel
     </button>
 
-    ${
-      debugMode
-        ? `
+    ${debugMode
+      ? `
     <div id="debugPanel" style="margin-top: 16px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 12px; color: #a0aec0; max-height: 200px; overflow-y: auto;">
       <strong>Debug Log:</strong>
       <div id="debugLog"></div>
     </div>
     `
-        : ""
+      : ""
     }
 
     <div class="paywall-footer">
@@ -128,6 +127,9 @@ export function getPaywallHtml(options: GetPaywallHtmlOptions): string {
     const networkPassphrase = ${JSON.stringify(networkPassphrase)};
     const horizonUrl = ${JSON.stringify(horizonUrl)};
     const debugMode = ${JSON.stringify(debugMode)};
+    const appName = ${JSON.stringify(appName)};
+    const appLogo = ${config?.appLogo ? JSON.stringify(config.appLogo) : 'null'};
+    const stellarLogoSvg = ${JSON.stringify(stellarLogoSvg)};
 
     // DOM elements
     const connectBtn = document.getElementById('connectBtn');
@@ -177,7 +179,7 @@ export function getPaywallHtml(options: GetPaywallHtmlOptions): string {
         const module = await import('https://cdn.jsdelivr.net/npm/@stellar/freighter-api@2.0.0/+esm');
         
         // Handle different export formats
-        if (module.isConnected && module.setAllowed && module.getAddress) {
+        if (module.isConnected && module.setAllowed && module.getPublicKey) {
           freighterApi = module;
         } else if (module.default && module.default.isConnected) {
           freighterApi = module.default;
@@ -257,21 +259,12 @@ export function getPaywallHtml(options: GetPaywallHtmlOptions): string {
           throw new Error('Access denied by user');
         }
 
-        // Get address
-        log('Getting address...');
-        const addressResult = await api.getAddress();
-        log('Address result: ' + JSON.stringify(addressResult));
-
-        // Handle different response formats
-        if (addressResult.error) {
-          throw new Error('Failed to get address: ' + addressResult.error);
-        }
-
-        // getAddress can return { address } or just the address string
-        publicKey = addressResult.address || addressResult;
+        // Get public key
+        log('Getting public key...');
+        publicKey = await api.getPublicKey();
         
         if (!publicKey || typeof publicKey !== 'string') {
-          throw new Error('No valid address returned from Freighter');
+          throw new Error('No valid public key returned from Freighter');
         }
 
         log('Connected: ' + publicKey);
@@ -321,11 +314,22 @@ export function getPaywallHtml(options: GetPaywallHtmlOptions): string {
         showStatus('Building transaction...', 'loading');
 
         // Import Stellar SDK from CDN
-        const StellarSdk = await import('https://cdn.jsdelivr.net/npm/@stellar/stellar-sdk@12.0.1/+esm');
+        const sdkModule = await import('https://cdn.jsdelivr.net/npm/@stellar/stellar-sdk@12.0.1/+esm');
+        const StellarSdk = sdkModule.default || sdkModule;
         log('Stellar SDK loaded');
 
         // Load source account
-        const server = new StellarSdk.Horizon.Server(horizonUrl);
+        let server;
+        if (StellarSdk.Horizon && StellarSdk.Horizon.Server) {
+          server = new StellarSdk.Horizon.Server(horizonUrl);
+        } else if (StellarSdk.Server) {
+          server = new StellarSdk.Server(horizonUrl);
+        } else {
+          log('SDK Keys: ' + Object.keys(StellarSdk).join(', '));
+          if (StellarSdk.Horizon) log('Horizon Keys: ' + Object.keys(StellarSdk.Horizon).join(', '));
+          throw new Error('Could not find Horizon Server in Stellar SDK');
+        }
+
         const sourceAccount = await server.loadAccount(publicKey);
         log('Account loaded: sequence ' + sourceAccount.sequence);
 
@@ -420,14 +424,56 @@ export function getPaywallHtml(options: GetPaywallHtmlOptions): string {
 
         if (response.ok) {
           log('Payment successful!');
-          showStatus('Payment successful! Redirecting...', 'success');
+          showStatus('Payment successful!', 'success');
 
-          // Handle response
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('text/html')) {
+          // Handle response based on content type
+          const contentType = response.headers.get('content-type') || '';
+          
+          if (contentType.includes('text/html')) {
+            // HTML response - replace the page
             document.documentElement.innerHTML = await response.text();
+          } else if (contentType.includes('application/json')) {
+            // JSON response - display it nicely
+            const data = await response.json();
+            log('Received JSON response: ' + JSON.stringify(data));
+            
+            // Hide paywall and show content
+            const container = document.querySelector('.paywall-container');
+            if (container) {
+              const description = paymentRequirements.description || appName;
+              const logoHtml = appLogo ? '<img src="' + appLogo + '" alt="' + appName + '" class="paywall-logo">' : stellarLogoSvg;
+              const jsonData = JSON.stringify(data, null, 2).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              
+              container.innerHTML = 
+                '<div class="paywall-header">' +
+                  logoHtml +
+                  '<h1 class="paywall-title">✅ Payment Successful!</h1>' +
+                  '<p class="paywall-subtitle">Access granted to ' + description + '</p>' +
+                '</div>' +
+                '<div style="background: var(--bg-card); border-radius: 12px; padding: 24px; margin-top: 24px; border: 1px solid var(--border-color);">' +
+                  '<h2 style="font-size: 18px; margin-bottom: 16px; color: var(--text-primary);">Response Data:</h2>' +
+                  '<pre style="background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; overflow-x: auto; color: var(--text-primary); font-size: 14px; line-height: 1.6; margin: 0;">' + 
+                    jsonData +
+                  '</pre>' +
+                '</div>' +
+                '<div style="margin-top: 24px; text-align: center;">' +
+                  '<a href="' + currentUrl + '" style="color: var(--stellar-purple); text-decoration: none; font-size: 14px;">← Back to paywall</a>' +
+                '</div>';
+            }
           } else {
-            window.location.reload();
+            // Other content types - try to display as text
+            const text = await response.text();
+            const container = document.querySelector('.paywall-container');
+            if (container) {
+              const escapedText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              container.innerHTML = 
+                '<div class="paywall-header">' +
+                  '<h1 class="paywall-title">✅ Payment Successful!</h1>' +
+                '</div>' +
+                '<div style="background: var(--bg-card); border-radius: 12px; padding: 24px; margin-top: 24px;">' +
+                  '<pre style="background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; overflow-x: auto; color: var(--text-primary); font-size: 14px; white-space: pre-wrap;">' + escapedText + '</pre>' +
+                '</div>';
+            }
           }
         } else {
           const errorData = await response.json().catch(function() { return {}; });
@@ -471,12 +517,10 @@ export function getPaywallHtml(options: GetPaywallHtmlOptions): string {
         if (available) {
           log('Checking if already connected...');
           const api = await loadFreighterApi();
-          const addressResult = await api.getAddress();
-
-          // Handle different response formats
-          const address = addressResult.address || addressResult;
-          if (address && typeof address === 'string' && !addressResult.error) {
-            publicKey = address;
+          
+          publicKey = await api.getPublicKey();
+          
+          if (publicKey && typeof publicKey === 'string') {
             log('Already connected: ' + publicKey);
 
             connectBtn.classList.add('hidden');

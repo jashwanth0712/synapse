@@ -191,16 +191,28 @@
           }
           
           // Request access
-          if (typeof window.freighterApi.requestAccess === 'function') {
-            log('Calling requestAccess...');
+          if (typeof window.freighterApi.setAllowed === 'function') {
+            log('Calling setAllowed...');
+            const isAllowed = await window.freighterApi.setAllowed();
+            log(`setAllowed result: ${isAllowed}`);
+            addResult('setAllowed', isAllowed ? 'Allowed' : 'Denied', isAllowed ? 'success' : 'error');
+          } else if (typeof window.freighterApi.requestAccess === 'function') {
+            // Fallback
+            log('Calling requestAccess (deprecated)...');
             const accessResult = await window.freighterApi.requestAccess();
             log(`requestAccess result: ${JSON.stringify(accessResult)}`);
             addResult('requestAccess', JSON.stringify(accessResult, null, 2), accessResult.error ? 'error' : 'success');
           }
           
-          // Get address
-          if (typeof window.freighterApi.getAddress === 'function') {
-            log('Calling getAddress...');
+          // Get public key
+          if (typeof window.freighterApi.getPublicKey === 'function') {
+            log('Calling getPublicKey...');
+            const publicKey = await window.freighterApi.getPublicKey();
+            log(`getPublicKey result: ${publicKey}`);
+            addResult('getPublicKey', publicKey, 'success');
+          } else if (typeof window.freighterApi.getAddress === 'function') {
+            // Fallback
+            log('Calling getAddress (deprecated)...');
             const addrResult = await window.freighterApi.getAddress();
             log(`getAddress result: ${JSON.stringify(addrResult)}`);
             addResult('getAddress', JSON.stringify(addrResult, null, 2), addrResult.error ? 'error' : 'success');
@@ -220,14 +232,24 @@
             log(`isConnected result: ${JSON.stringify(connResult)}`);
           }
           
-          if (typeof window.freighter.requestAccess === 'function') {
+          if (typeof window.freighter.setAllowed === 'function') {
+            log('Calling setAllowed...');
+            const isAllowed = await window.freighter.setAllowed();
+            log(`setAllowed result: ${isAllowed}`);
+            addResult('setAllowed', isAllowed ? 'Allowed' : 'Denied', isAllowed ? 'success' : 'error');
+          } else if (typeof window.freighter.requestAccess === 'function') {
             log('Calling requestAccess...');
             const accessResult = await window.freighter.requestAccess();
             log(`requestAccess result: ${JSON.stringify(accessResult)}`);
             addResult('requestAccess', JSON.stringify(accessResult, null, 2), 'success');
           }
           
-          if (typeof window.freighter.getAddress === 'function') {
+          if (typeof window.freighter.getPublicKey === 'function') {
+            log('Calling getPublicKey...');
+            const publicKey = await window.freighter.getPublicKey();
+            log(`getPublicKey result: ${publicKey}`);
+            addResult('getPublicKey', publicKey, 'success');
+          } else if (typeof window.freighter.getAddress === 'function') {
             log('Calling getAddress...');
             const addrResult = await window.freighter.getAddress();
             log(`getAddress result: ${JSON.stringify(addrResult)}`);
@@ -289,16 +311,26 @@
             addResult('CDN isConnected', JSON.stringify(result, null, 2), result.isConnected ? 'success' : 'info');
           }
           
-          // Try requestAccess
-          if (typeof api.requestAccess === 'function') {
+          // Try setAllowed
+          if (typeof api.setAllowed === 'function') {
+            log('Calling api.setAllowed()...');
+            const result = await api.setAllowed();
+            log(`setAllowed result: ${result}`);
+            addResult('CDN setAllowed', result ? 'Allowed' : 'Denied', result ? 'success' : 'error');
+          } else if (typeof api.requestAccess === 'function') {
             log('Calling api.requestAccess()...');
             const result = await api.requestAccess();
             log(`requestAccess result: ${JSON.stringify(result)}`);
             addResult('CDN requestAccess', JSON.stringify(result, null, 2), result.error ? 'error' : 'success');
           }
           
-          // Try getAddress
-          if (typeof api.getAddress === 'function') {
+          // Try getPublicKey
+          if (typeof api.getPublicKey === 'function') {
+            log('Calling api.getPublicKey()...');
+            const result = await api.getPublicKey();
+            log(`getPublicKey result: ${result}`);
+            addResult('CDN getPublicKey', result, 'success');
+          } else if (typeof api.getAddress === 'function') {
             log('Calling api.getAddress()...');
             const result = await api.getAddress();
             log(`getAddress result: ${JSON.stringify(result)}`);

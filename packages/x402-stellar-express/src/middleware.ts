@@ -92,6 +92,8 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
 
     const routeConfig = matchingRoute.config;
 
+    console.log(`[x402-middleware] 🔒 Protected route matched: ${req.method} ${req.path}`);
+
     // Build payment requirements
     const paymentRequirements: PaymentRequirements = {
       scheme: "exact",
@@ -105,12 +107,22 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
       asset: routeConfig.asset || asset,
     };
 
+    console.log(`[x402-middleware] 💰 Payment requirements:`, {
+      amount: paymentRequirements.maxAmountRequired,
+      asset: paymentRequirements.asset,
+      network: paymentRequirements.network,
+      payTo: paymentRequirements.payTo,
+      resource: paymentRequirements.resource,
+    });
+
     // Check for X-PAYMENT header
     const paymentHeader = req.get("X-PAYMENT");
 
     if (!paymentHeader) {
+      console.log(`[x402-middleware] ⚠️  No X-PAYMENT header - requesting payment`);
       // For browser requests, serve the paywall HTML UI
       if (isBrowserRequest(req)) {
+        console.log(`[x402-middleware] 🌐 Browser request - serving paywall HTML`);
         const html = getPaywallHtml({
           paymentRequirements,
           currentUrl: req.originalUrl,
@@ -121,6 +133,7 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
       }
 
       // For API/programmatic requests, return JSON
+      console.log(`[x402-middleware] 📡 API request - returning 402 JSON`);
       res.status(402).json({
         x402Version: 1,
         error: "Payment Required",
@@ -129,11 +142,22 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
       return;
     }
 
+    console.log(`[x402-middleware] ✅ X-PAYMENT header present (length: ${paymentHeader.length})`);
+
     // Decode and validate payment payload
     let paymentPayload: PaymentPayload;
     try {
       paymentPayload = decodePaymentHeader<PaymentPayload>(paymentHeader);
-    } catch {
+      console.log(`[x402-middleware] 📦 Payment payload decoded:`, {
+        x402Version: paymentPayload.x402Version,
+        scheme: paymentPayload.scheme,
+        network: paymentPayload.network,
+        sourceAccount: paymentPayload.payload.sourceAccount,
+        amount: paymentPayload.payload.amount,
+        destination: paymentPayload.payload.destination,
+      });
+    } catch (error) {
+      console.error(`[x402-middleware] ❌ Failed to decode payment header:`, error);
       res.status(402).json({
         x402Version: 1,
         error: "Invalid payment header",
@@ -144,9 +168,11 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
 
     // Verify payment with facilitator
     try {
+      console.log(`[x402-middleware] 🔍 Verifying payment with facilitator...`);
       const verifyResult = await verify(paymentPayload, paymentRequirements);
 
       if (!verifyResult.isValid) {
+        console.error(`[x402-middleware] ❌ Payment verification failed:`, verifyResult.invalidReason);
         res.status(402).json({
           x402Version: 1,
           error: verifyResult.invalidReason || "Payment verification failed",
@@ -155,6 +181,8 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
         });
         return;
       }
+
+      console.log(`[x402-middleware] ✅ Payment verified successfully - payer: ${verifyResult.payer}`);
 
       // Store payment info on request for downstream use
       (req as Request & { x402Payment?: { payload: PaymentPayload; requirements: PaymentRequirements } }).x402Payment = {
@@ -167,6 +195,7 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
       // until we've completed settlement. This ensures we only charge
       // users for successful requests.
       // ============================================================
+      console.log(`[x402-middleware] 📦 Setting up response buffering - will settle after route handler succeeds`);
       const originalWriteHead = res.writeHead.bind(res);
       const originalWrite = res.write.bind(res);
       const originalEnd = res.end.bind(res);
@@ -181,6 +210,7 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
 
       res.writeHead = function (...args: Parameters<typeof originalWriteHead>) {
         if (!settled) {
+          console.log(`[x402-middleware] 📦 Buffering writeHead: status ${args[0]}`);
           bufferedCalls.push(["writeHead", args]);
           return res;
         }
@@ -189,6 +219,8 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
 
       res.write = function (...args: Parameters<typeof originalWrite>) {
         if (!settled) {
+          const dataLength = typeof args[0] === 'string' ? args[0].length : (args[0] as Buffer)?.length || 0;
+          console.log(`[x402-middleware] 📦 Buffering write: ${dataLength} bytes`);
           bufferedCalls.push(["write", args]);
           return true;
         }
@@ -197,6 +229,8 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
 
       res.end = function (...args: Parameters<typeof originalEnd>) {
         if (!settled) {
+          const dataLength = args[0] ? (typeof args[0] === 'string' ? args[0].length : (args[0] as Buffer)?.length || 0) : 0;
+          console.log(`[x402-middleware] 📦 Buffering end: ${dataLength} bytes`);
           bufferedCalls.push(["end", args]);
           return res;
         }
@@ -205,16 +239,23 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
 
       // Helper to replay buffered calls
       const replayBufferedCalls = () => {
+        console.log(`[x402-middleware] 🔄 Replaying ${bufferedCalls.length} buffered response calls...`);
         for (const [method, args] of bufferedCalls) {
           if (method === "writeHead") {
+            console.log(`[x402-middleware]   → Replaying writeHead: status ${args[0]}`);
             originalWriteHead(...(args as Parameters<typeof originalWriteHead>));
           } else if (method === "write") {
+            const dataLength = typeof args[0] === 'string' ? args[0].length : (args[0] as Buffer)?.length || 0;
+            console.log(`[x402-middleware]   → Replaying write: ${dataLength} bytes`);
             originalWrite(...(args as Parameters<typeof originalWrite>));
           } else if (method === "end") {
+            const dataLength = args[0] ? (typeof args[0] === 'string' ? args[0].length : (args[0] as Buffer)?.length || 0) : 0;
+            console.log(`[x402-middleware]   → Replaying end: ${dataLength} bytes`);
             originalEnd(...(args as Parameters<typeof originalEnd>));
           }
         }
         bufferedCalls = [];
+        console.log(`[x402-middleware] ✅ All buffered calls replayed`);
       };
 
       // Helper to restore original methods
@@ -228,7 +269,9 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
       // ============================================================
       // Execute route handler
       // ============================================================
+      console.log(`[x402-middleware] 🚀 Executing route handler for ${req.method} ${req.path}...`);
       await next();
+      console.log(`[x402-middleware] ✅ Route handler completed - status: ${res.statusCode}`);
 
       // ============================================================
       // Post-route settlement logic
@@ -236,16 +279,24 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
 
       // If the route returned an error (4xx/5xx), don't settle - just replay buffered response
       if (res.statusCode >= 400) {
+        console.log(`[x402-middleware] ⚠️  Route returned error status ${res.statusCode} - skipping settlement, replaying error response`);
         restoreResponseMethods();
         replayBufferedCalls();
         return;
       }
 
       // Route succeeded - now settle the payment
+      console.log(`[x402-middleware] 💸 Route succeeded - proceeding to settlement...`);
       try {
         const settleResult = await settle(paymentPayload, paymentRequirements);
 
         if (settleResult.success) {
+          console.log(`[x402-middleware] ✅ Payment settled successfully:`, {
+            transaction: settleResult.transaction,
+            network: settleResult.network,
+            payer: settleResult.payer,
+          });
+          
           // Add X-PAYMENT-RESPONSE header with settlement details
           res.set(
             "X-PAYMENT-RESPONSE",
@@ -256,10 +307,16 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
               payer: settleResult.payer,
             })
           );
-          console.log(`[x402] Payment settled: ${settleResult.transaction}`);
+          console.log(`[x402-middleware] 📤 Added X-PAYMENT-RESPONSE header`);
+          
+          // Settlement successful - restore methods and replay buffered response
+          console.log(`[x402-middleware] 📥 Replaying buffered response (${bufferedCalls.length} calls)`);
+          restoreResponseMethods();
+          replayBufferedCalls();
+          console.log(`[x402-middleware] ✨ Response sent to client - payment flow complete`);
         } else {
           // Settlement failed - return 402 error instead of the buffered response
-          console.error(`[x402] Settlement failed: ${settleResult.errorReason}`);
+          console.error(`[x402-middleware] ❌ Settlement failed:`, settleResult.errorReason);
           restoreResponseMethods();
           bufferedCalls = []; // Discard buffered response
           res.status(402).json({
@@ -272,7 +329,7 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
         }
       } catch (error) {
         // Settlement error - return 402
-        console.error("[x402] Settlement error:", error);
+        console.error("[x402-middleware] ❌ Settlement error:", error);
         restoreResponseMethods();
         bufferedCalls = [];
         res.status(402).json({
@@ -282,10 +339,6 @@ export function paymentMiddleware(config: PaymentMiddlewareConfig): RequestHandl
         });
         return;
       }
-
-      // Settlement successful - restore methods and replay buffered response
-      restoreResponseMethods();
-      replayBufferedCalls();
     } catch (error) {
       console.error("[x402] Verification error:", error);
       res.status(500).json({

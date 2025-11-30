@@ -25,21 +25,23 @@ export async function isFreighterConnected(): Promise<boolean> {
  */
 export async function getFreighterPublicKey(): Promise<string> {
   const freighterApi = await import("@stellar/freighter-api");
-  const { requestAccess, getAddress } = freighterApi;
+  const { setAllowed, getPublicKey } = freighterApi;
 
   // Request access if not already granted
-  const accessResult = await requestAccess();
-  if (accessResult.error) {
-    throw new Error(`Freighter access denied: ${accessResult.error}`);
+  // setAllowed returns boolean directly
+  const isAllowed = await setAllowed();
+  if (!isAllowed) {
+    throw new Error("Freighter access denied");
   }
 
-  // Get the address
-  const addressResult = await getAddress();
-  if (addressResult.error) {
-    throw new Error(`Failed to get Freighter address: ${addressResult.error}`);
+  // Get the public key
+  // getPublicKey returns string directly
+  const publicKey = await getPublicKey();
+  if (!publicKey) {
+    throw new Error("Failed to get Freighter public key");
   }
 
-  return addressResult.address;
+  return publicKey;
 }
 
 /**
@@ -61,11 +63,11 @@ export async function signWithFreighter(
     networkPassphrase,
   });
 
-  if (result.error) {
-    throw new Error(`Freighter signing failed: ${result.error}`);
+  if (!result) {
+    throw new Error("Freighter signing failed");
   }
 
-  return result.signedTxXdr;
+  return result;
 }
 
 /**
@@ -76,10 +78,10 @@ export async function getFreighterNetwork(): Promise<string> {
   const { getNetwork } = freighterApi;
 
   const result = await getNetwork();
-  if (result.error) {
-    throw new Error(`Failed to get Freighter network: ${result.error}`);
+  if (!result) {
+    throw new Error("Failed to get Freighter network");
   }
 
-  return result.network;
+  return result;
 }
 
