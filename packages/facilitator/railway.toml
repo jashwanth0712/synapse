@@ -10,7 +10,7 @@ builder = "NIXPACKS"
 buildCommand = "pnpm install && pnpm build"
 
 [deploy]
-startCommand = "cd packages/facilitator && node dist/index.js"
+startCommand = "cd /app/packages/facilitator && node dist/index.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"

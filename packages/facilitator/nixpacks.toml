@@ -12,5 +12,5 @@ cmds = ["pnpm install"]
 cmds = ["pnpm build"]
 
 [start]
-cmd = "cd packages/facilitator && node dist/index.js"
+cmd = "cd /app/packages/facilitator && node dist/index.js"
 

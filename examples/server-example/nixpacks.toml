@@ -12,5 +12,5 @@ cmds = ["pnpm install"]
 cmds = ["pnpm build"]
 
 [start]
-cmd = "cd examples/server-example && npx tsx src/index.ts"
+cmd = "cd /app/examples/server-example && npx tsx src/index.ts"
 
