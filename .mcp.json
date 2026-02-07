@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "synapse-mcp": {
+      "command": "node",
+      "args": ["packages/synapse-mcp/dist/index.js"]
+    }
+  }
+}
