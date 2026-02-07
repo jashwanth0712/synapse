@@ -26,6 +26,11 @@ if (!command) {
       await statsCommand();
       break;
     }
+    case "migrate": {
+      const { migrateCommand } = await import("./cli/migrate.js");
+      await migrateCommand();
+      break;
+    }
     default:
       console.error(`Unknown command: ${command}`);
       printUsage();
@@ -48,6 +53,7 @@ function printUsage(): void {
     wallet       Print wallet address and balance
     fund         Fund wallet via Friendbot (testnet)
     stats        Show usage and contribution stats
+    migrate      Migrate local SQLite plans to Soroban on-chain
 
   MCP Tools:
     synapse_search   Search plans (0.2 XLM)
@@ -64,5 +70,11 @@ function printUsage(): void {
     SYNAPSE_VALIDATION_THRESHOLD  Min score to accept content (default: 60)
     SYNAPSE_SIMILARITY_CHECK      Enable semantic dedup check (default: true, set "false" to disable)
     SYNAPSE_SIMILARITY_THRESHOLD  BM25 threshold for "too similar" (default: -5, closer to 0 = stricter)
+    SYNAPSE_STORAGE_MODE          Storage mode: local | soroban | dual (default: local)
+    SYNAPSE_SOROBAN_RPC_URL       Soroban RPC URL (default: https://soroban-testnet.stellar.org)
+    SYNAPSE_CONTRACT_ID           Deployed Soroban contract address
+    SYNAPSE_IPFS_API_KEY          Pinata API key for IPFS storage
+    SYNAPSE_IPFS_API_SECRET       Pinata API secret
+    SYNAPSE_IPFS_GATEWAY          IPFS gateway URL (default: https://gateway.pinata.cloud)
 `);
 }

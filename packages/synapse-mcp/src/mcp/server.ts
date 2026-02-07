@@ -13,14 +13,51 @@ import {
   VALIDATION_ENABLED,
   SIMILARITY_CHECK_ENABLED,
   SIMILARITY_THRESHOLD,
+  STORAGE_MODE,
+  SOROBAN_RPC_URL,
+  CONTRACT_ID,
+  INDEXER_DB_PATH,
 } from "../config.js";
 import { validateContent } from "../validation/analyzer.js";
 import { checkSemanticSimilarity } from "../validation/similarity.js";
+import type { StorageProvider } from "../storage/provider.js";
+
+async function createStorageProvider(keypair: ReturnType<typeof loadOrCreateWallet>): Promise<StorageProvider> {
+  if (STORAGE_MODE === "soroban" || STORAGE_MODE === "dual") {
+    if (!CONTRACT_ID) {
+      console.error("[Synapse] SYNAPSE_CONTRACT_ID not set, falling back to local storage");
+      return new LocalStorageProvider(DB_PATH);
+    }
+
+    const { PinataClient } = await import("../ipfs/client.js");
+    const { SorobanEventIndexer } = await import("../indexer/event-listener.js");
+    const { SorobanStorageProvider } = await import("../storage/soroban-provider.js");
+
+    const ipfsClient = new PinataClient();
+    const indexer = new SorobanEventIndexer(
+      SOROBAN_RPC_URL,
+      CONTRACT_ID,
+      INDEXER_DB_PATH,
+      ipfsClient,
+    );
+    indexer.start();
+
+    return new SorobanStorageProvider(
+      SOROBAN_RPC_URL,
+      CONTRACT_ID,
+      keypair,
+      ipfsClient,
+      indexer,
+    );
+  }
+
+  return new LocalStorageProvider(DB_PATH);
+}
 
 export async function startMcpServer(): Promise<void> {
   const keypair = loadOrCreateWallet();
   const publicKey = keypair.publicKey();
-  const storage = new LocalStorageProvider(DB_PATH);
+  const storage = await createStorageProvider(keypair);
 
   // Auto-fund on testnet if new wallet
   try {
