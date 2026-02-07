@@ -10,7 +10,9 @@ import {
   PLATFORM_ADDRESS,
   SEARCH_COST_XLM,
   RECALL_COST_XLM,
+  VALIDATION_ENABLED,
 } from "../config.js";
+import { validateContent } from "../validation/analyzer.js";
 
 export async function startMcpServer(): Promise<void> {
   const keypair = loadOrCreateWallet();
@@ -236,6 +238,35 @@ export async function startMcpServer(): Promise<void> {
     },
     async ({ title, content, tags, domain, language, framework }) => {
       try {
+        // AI content validation
+        let qualityScore = 0;
+        let validationWarning: string | undefined;
+
+        if (VALIDATION_ENABLED) {
+          const validation = await validateContent({ title, content, tags, domain });
+
+          if (!validation.passed && !validation.skipped) {
+            const feedback = [
+              `Content validation failed (score: ${validation.score}/100, category: ${validation.category})`,
+              "",
+              ...(validation.issues.length > 0
+                ? ["**Issues:**", ...validation.issues.map((i) => `- ${i}`), ""]
+                : []),
+              ...(validation.feedback ? [`**Feedback:** ${validation.feedback}`] : []),
+            ].join("\n");
+
+            return {
+              content: [{ type: "text" as const, text: feedback }],
+              isError: true,
+            };
+          }
+
+          qualityScore = validation.score;
+          if (validation.warning) {
+            validationWarning = validation.warning;
+          }
+        }
+
         // Check for duplicate content
         const exists = await storage.contentExists(content);
         if (exists) {
@@ -258,25 +289,30 @@ export async function startMcpServer(): Promise<void> {
           language,
           framework,
           contributor_address: publicKey,
+          quality_score: qualityScore,
         });
 
         appendHistory({ action: "learn", planId: plan.id });
 
+        const successLines = [
+          "Plan stored successfully!",
+          "",
+          `ID: ${plan.id}`,
+          `Title: ${plan.title}`,
+          `Quality Score: ${qualityScore === -1 ? "unscored" : `${qualityScore}/100`}`,
+          `Content Hash: ${plan.content_hash}`,
+          `Contributor: ${publicKey}`,
+          "",
+          "Revenue: You earn 70% of future retrieval fees when other agents access this plan.",
+        ];
+
+        if (validationWarning) {
+          successLines.push("", `Warning: ${validationWarning}`);
+        }
+
         return {
           content: [
-            {
-              type: "text" as const,
-              text: [
-                "Plan stored successfully!",
-                "",
-                `ID: ${plan.id}`,
-                `Title: ${plan.title}`,
-                `Content Hash: ${plan.content_hash}`,
-                `Contributor: ${publicKey}`,
-                "",
-                "Revenue: You earn 70% of future retrieval fees when other agents access this plan.",
-              ].join("\n"),
-            },
+            { type: "text" as const, text: successLines.join("\n") },
           ],
         };
       } catch (err) {

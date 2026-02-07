@@ -78,4 +78,5 @@ export interface StorePlanInput {
   language?: string;
   framework?: string;
   contributor_address: string;
+  quality_score?: number; // -1 = unscored, 0-100 = AI score
 }

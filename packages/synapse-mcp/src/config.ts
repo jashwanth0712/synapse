@@ -23,3 +23,8 @@ export const PLATFORM_ADDRESS =
 
 export const SEARCH_COST_XLM = "0.2";
 export const RECALL_COST_XLM = "1";
+
+// Content validation settings
+export const VALIDATION_ENABLED = process.env.SYNAPSE_VALIDATION_ENABLED !== "false";
+export const VALIDATION_TIMEOUT_MS = parseInt(process.env.SYNAPSE_VALIDATION_TIMEOUT || "60000", 10);
+export const VALIDATION_PASS_THRESHOLD = parseInt(process.env.SYNAPSE_VALIDATION_THRESHOLD || "60", 10);

@@ -23,6 +23,7 @@ export class PlanStore {
     language?: string;
     framework?: string;
     contributor_address: string;
+    quality_score?: number;
   }): Plan {
     const id = randomUUID();
     const content_hash = createHash("sha256")
@@ -31,8 +32,8 @@ export class PlanStore {
     const tagsJson = JSON.stringify(plan.tags);
 
     const stmt = this.db.prepare(`
-      INSERT INTO plans (id, title, description, content, content_hash, tags, domain, language, framework, contributor_address)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO plans (id, title, description, content, content_hash, tags, domain, language, framework, contributor_address, quality_score)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -46,6 +47,7 @@ export class PlanStore {
       plan.language || null,
       plan.framework || null,
       plan.contributor_address,
+      plan.quality_score ?? 0,
     );
 
     return this.getById(id)!;

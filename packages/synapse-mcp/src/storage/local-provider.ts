@@ -39,6 +39,7 @@ export class LocalStorageProvider implements StorageProvider {
       language: plan.language,
       framework: plan.framework,
       contributor_address: plan.contributor_address,
+      quality_score: plan.quality_score,
     });
   }
 

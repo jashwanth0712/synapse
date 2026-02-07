@@ -55,9 +55,12 @@ function printUsage(): void {
     synapse_learn    Upload a plan (free)
 
   Environment:
-    STELLAR_SECRET_KEY        Use existing Stellar key
-    SYNAPSE_CONFIG_DIR        Custom config directory
-    SYNAPSE_DATA_DIR          Custom data directory
-    SYNAPSE_PLATFORM_ADDRESS  Override platform address
+    STELLAR_SECRET_KEY            Use existing Stellar key
+    SYNAPSE_CONFIG_DIR            Custom config directory
+    SYNAPSE_DATA_DIR              Custom data directory
+    SYNAPSE_PLATFORM_ADDRESS      Override platform address
+    SYNAPSE_VALIDATION_ENABLED    Enable AI content validation (default: true, set "false" to disable)
+    SYNAPSE_VALIDATION_TIMEOUT    Validation timeout in ms (default: 60000)
+    SYNAPSE_VALIDATION_THRESHOLD  Min score to accept content (default: 60)
 `);
 }
