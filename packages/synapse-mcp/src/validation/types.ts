@@ -24,3 +24,23 @@ export interface ValidationResult {
   skipped: boolean;
   warning?: string;
 }
+
+export interface SimilarityCandidate {
+  id: string;
+  title: string;
+  content: string;
+}
+
+export interface SimilarityMatch {
+  id: string;
+  title: string;
+  similarity: number; // 0-100, how similar Claude thinks they are
+  explanation: string;
+}
+
+export interface SimilarityResult {
+  hasDuplicate: boolean;
+  matches: SimilarityMatch[];
+  skipped: boolean;
+  warning?: string;
+}

@@ -7,6 +7,7 @@ vi.mock("child_process", () => ({
 
 // Must import after mocking
 const { validateContent } = await import("../src/validation/analyzer.js");
+const { checkSemanticSimilarity } = await import("../src/validation/similarity.js");
 
 const mockedExecFile = vi.mocked(execFile);
 
@@ -15,6 +16,16 @@ function mockClaudeResponse(response: object): void {
     (_cmd: unknown, _args: unknown, _opts: unknown, callback: unknown) => {
       const cb = callback as (err: Error | null, stdout: string, stderr: string) => void;
       cb(null, JSON.stringify({ result: JSON.stringify(response) }), "");
+      return {} as ReturnType<typeof execFile>;
+    },
+  );
+}
+
+function mockClaudeRawResponse(raw: string): void {
+  mockedExecFile.mockImplementation(
+    (_cmd: unknown, _args: unknown, _opts: unknown, callback: unknown) => {
+      const cb = callback as (err: Error | null, stdout: string, stderr: string) => void;
+      cb(null, raw, "");
       return {} as ReturnType<typeof execFile>;
     },
   );
@@ -137,13 +148,7 @@ describe("validateContent", () => {
   });
 
   it("gracefully degrades on malformed JSON response", async () => {
-    mockedExecFile.mockImplementation(
-      (_cmd: unknown, _args: unknown, _opts: unknown, callback: unknown) => {
-        const cb = callback as (err: Error | null, stdout: string, stderr: string) => void;
-        cb(null, "this is not json at all", "");
-        return {} as ReturnType<typeof execFile>;
-      },
-    );
+    mockClaudeRawResponse("this is not json at all");
 
     const result = await validateContent(sampleInput);
 
@@ -162,5 +167,123 @@ describe("validateContent", () => {
     expect(result.passed).toBe(true);
     expect(result.score).toBe(-1);
     expect(result.skipped).toBe(true);
+  });
+});
+
+describe("checkSemanticSimilarity", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns no duplicate when candidates list is empty", async () => {
+    const result = await checkSemanticSimilarity("New Plan", "content", []);
+
+    expect(result.hasDuplicate).toBe(false);
+    expect(result.matches).toHaveLength(0);
+    expect(result.skipped).toBe(false);
+  });
+
+  it("detects duplicate when Claude reports high similarity (80%)", async () => {
+    const candidates = [
+      { id: "abc-123", title: "Existing Plan", content: "existing content" },
+    ];
+
+    mockClaudeRawResponse(
+      JSON.stringify({
+        result: JSON.stringify([
+          { id: "abc-123", title: "Existing Plan", similarity: 80, explanation: "Same topic and approach" },
+        ]),
+      }),
+    );
+
+    const result = await checkSemanticSimilarity("New Plan", "new content", candidates);
+
+    expect(result.hasDuplicate).toBe(true);
+    expect(result.matches).toHaveLength(1);
+    expect(result.matches[0].similarity).toBe(80);
+    expect(result.matches[0].explanation).toContain("Same topic");
+  });
+
+  it("allows content when Claude reports low similarity (30%)", async () => {
+    const candidates = [
+      { id: "abc-123", title: "Existing Plan", content: "existing content" },
+    ];
+
+    mockClaudeRawResponse(
+      JSON.stringify({
+        result: JSON.stringify([
+          { id: "abc-123", title: "Existing Plan", similarity: 30, explanation: "Different approach entirely" },
+        ]),
+      }),
+    );
+
+    const result = await checkSemanticSimilarity("New Plan", "new content", candidates);
+
+    expect(result.hasDuplicate).toBe(false);
+    expect(result.matches).toHaveLength(0);
+  });
+
+  it("only flags candidates above threshold with multiple candidates", async () => {
+    const candidates = [
+      { id: "abc-123", title: "Plan A", content: "content a" },
+      { id: "def-456", title: "Plan B", content: "content b" },
+    ];
+
+    mockClaudeRawResponse(
+      JSON.stringify({
+        result: JSON.stringify([
+          { id: "abc-123", title: "Plan A", similarity: 85, explanation: "Very similar" },
+          { id: "def-456", title: "Plan B", similarity: 25, explanation: "Different topic" },
+        ]),
+      }),
+    );
+
+    const result = await checkSemanticSimilarity("New Plan", "new content", candidates);
+
+    expect(result.hasDuplicate).toBe(true);
+    expect(result.matches).toHaveLength(1);
+    expect(result.matches[0].id).toBe("abc-123");
+  });
+
+  it("gracefully degrades when Claude CLI is not installed", async () => {
+    const candidates = [
+      { id: "abc-123", title: "Existing Plan", content: "existing content" },
+    ];
+
+    mockClaudeError("ENOENT", "spawn claude ENOENT");
+
+    const result = await checkSemanticSimilarity("New Plan", "new content", candidates);
+
+    expect(result.hasDuplicate).toBe(false);
+    expect(result.skipped).toBe(true);
+    expect(result.warning).toContain("Claude CLI not installed");
+  });
+
+  it("gracefully degrades on timeout", async () => {
+    const candidates = [
+      { id: "abc-123", title: "Existing Plan", content: "existing content" },
+    ];
+
+    mockClaudeTimeout();
+
+    const result = await checkSemanticSimilarity("New Plan", "new content", candidates);
+
+    expect(result.hasDuplicate).toBe(false);
+    expect(result.skipped).toBe(true);
+    expect(result.warning).toContain("timed out");
+  });
+
+  it("gracefully degrades on malformed response", async () => {
+    const candidates = [
+      { id: "abc-123", title: "Existing Plan", content: "existing content" },
+    ];
+
+    mockClaudeRawResponse("not json");
+
+    const result = await checkSemanticSimilarity("New Plan", "new content", candidates);
+
+    expect(result.hasDuplicate).toBe(false);
+    expect(result.skipped).toBe(true);
+    expect(result.warning).toContain("Similarity check error");
   });
 });

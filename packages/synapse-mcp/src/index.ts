@@ -62,5 +62,7 @@ function printUsage(): void {
     SYNAPSE_VALIDATION_ENABLED    Enable AI content validation (default: true, set "false" to disable)
     SYNAPSE_VALIDATION_TIMEOUT    Validation timeout in ms (default: 60000)
     SYNAPSE_VALIDATION_THRESHOLD  Min score to accept content (default: 60)
+    SYNAPSE_SIMILARITY_CHECK      Enable semantic dedup check (default: true, set "false" to disable)
+    SYNAPSE_SIMILARITY_THRESHOLD  BM25 threshold for "too similar" (default: -5, closer to 0 = stricter)
 `);
 }

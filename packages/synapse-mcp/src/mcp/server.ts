@@ -11,8 +11,11 @@ import {
   SEARCH_COST_XLM,
   RECALL_COST_XLM,
   VALIDATION_ENABLED,
+  SIMILARITY_CHECK_ENABLED,
+  SIMILARITY_THRESHOLD,
 } from "../config.js";
 import { validateContent } from "../validation/analyzer.js";
+import { checkSemanticSimilarity } from "../validation/similarity.js";
 
 export async function startMcpServer(): Promise<void> {
   const keypair = loadOrCreateWallet();
@@ -267,7 +270,7 @@ export async function startMcpServer(): Promise<void> {
           }
         }
 
-        // Check for duplicate content
+        // Check for exact duplicate content (SHA-256)
         const exists = await storage.contentExists(content);
         if (exists) {
           return {
@@ -279,6 +282,65 @@ export async function startMcpServer(): Promise<void> {
             ],
             isError: true,
           };
+        }
+
+        // Check for semantically similar content
+        // Stage 1: BM25 pre-filter to find candidates
+        // Stage 2: Claude CLI semantic comparison on candidates
+        if (SIMILARITY_CHECK_ENABLED) {
+          const searchQuery = `${title} ${tags.join(" ")}`;
+          const bm25Results = await storage.search({ query: searchQuery, tags, limit: 5 });
+
+          // Pre-filter: only send candidates with reasonable BM25 relevance to Claude
+          const candidates = bm25Results.filter((r) => r.rank > SIMILARITY_THRESHOLD);
+
+          if (candidates.length > 0) {
+            // Fetch full content for each candidate
+            const candidatesWithContent = await Promise.all(
+              candidates.map(async (r) => {
+                const full = await storage.getById(r.id);
+                return full ? { id: r.id, title: r.title, content: full.content } : null;
+              }),
+            );
+            const validCandidates = candidatesWithContent.filter(
+              (c): c is NonNullable<typeof c> => c !== null,
+            );
+
+            if (validCandidates.length > 0) {
+              const similarity = await checkSemanticSimilarity(title, content, validCandidates);
+
+              if (similarity.hasDuplicate) {
+                const matches = similarity.matches
+                  .map(
+                    (m) =>
+                      `- **${m.title}** (id: ${m.id}, similarity: ${m.similarity}%)\n  ${m.explanation}`,
+                  )
+                  .join("\n");
+
+                return {
+                  content: [
+                    {
+                      type: "text" as const,
+                      text: [
+                        "Semantically similar content already exists in the knowledge base:",
+                        "",
+                        matches,
+                        "",
+                        "Your submission covers substantially the same ground as existing plans.",
+                        "Use `synapse_recall` with the plan ID to review the existing content.",
+                        "If your content adds significant new information, try narrowing the scope or focusing on what's different.",
+                      ].join("\n"),
+                    },
+                  ],
+                  isError: true,
+                };
+              }
+
+              if (similarity.warning && !validationWarning) {
+                validationWarning = similarity.warning;
+              }
+            }
+          }
         }
 
         const plan = await storage.store({

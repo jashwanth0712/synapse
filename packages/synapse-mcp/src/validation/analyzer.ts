@@ -1,16 +1,14 @@
-import { execFile } from "child_process";
-import { VALIDATION_TIMEOUT_MS, VALIDATION_PASS_THRESHOLD } from "../config.js";
-import { buildValidationPrompt, VALIDATION_JSON_SCHEMA } from "./prompt.js";
+import { VALIDATION_PASS_THRESHOLD } from "../config.js";
+import { callClaude, parseJsonFromClaude } from "./claude-cli.js";
+import { buildValidationPrompt } from "./prompt.js";
 import type { ValidationInput, ValidationResult, ClaudeValidationOutput } from "./types.js";
-
-const MAX_BUFFER = 1024 * 1024; // 1MB
 
 export async function validateContent(input: ValidationInput): Promise<ValidationResult> {
   const prompt = buildValidationPrompt(input, VALIDATION_PASS_THRESHOLD);
 
   try {
     const output = await callClaude(prompt);
-    const parsed = parseClaudeOutput(output);
+    const parsed = parseValidationOutput(output);
     return {
       passed: parsed.passed,
       score: parsed.score,
@@ -44,53 +42,8 @@ export async function validateContent(input: ValidationInput): Promise<Validatio
   }
 }
 
-function callClaude(prompt: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = execFile(
-      "claude",
-      ["-p", prompt, "--output-format", "json"],
-      {
-        timeout: VALIDATION_TIMEOUT_MS,
-        maxBuffer: MAX_BUFFER,
-        env: { ...process.env },
-      },
-      (error, stdout, stderr) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        if (stderr && !stdout) {
-          reject(new Error(`Claude CLI stderr: ${stderr}`));
-          return;
-        }
-        resolve(stdout);
-      },
-    );
-
-    child.stdin?.end();
-  });
-}
-
-function parseClaudeOutput(raw: string): ClaudeValidationOutput {
-  let text = raw.trim();
-
-  // Claude --output-format json wraps response in a JSON object with a "result" field
-  try {
-    const wrapper = JSON.parse(text);
-    if (wrapper.result) {
-      text = typeof wrapper.result === "string" ? wrapper.result : JSON.stringify(wrapper.result);
-    }
-  } catch {
-    // Not wrapped, continue with raw text
-  }
-
-  // Try to extract JSON from the text (may be surrounded by markdown fences)
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error("No JSON object found in Claude response");
-  }
-
-  const parsed = JSON.parse(jsonMatch[0]);
+function parseValidationOutput(raw: string): ClaudeValidationOutput {
+  const parsed = parseJsonFromClaude(raw) as Record<string, unknown>;
 
   if (
     typeof parsed.passed !== "boolean" ||
@@ -103,9 +56,9 @@ function parseClaudeOutput(raw: string): ClaudeValidationOutput {
   return {
     passed: parsed.passed,
     score: parsed.score,
-    category: parsed.category,
-    issues: Array.isArray(parsed.issues) ? parsed.issues : [],
-    strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
-    feedback: parsed.feedback || "",
+    category: parsed.category as ClaudeValidationOutput["category"],
+    issues: Array.isArray(parsed.issues) ? parsed.issues as string[] : [],
+    strengths: Array.isArray(parsed.strengths) ? parsed.strengths as string[] : [],
+    feedback: (parsed.feedback as string) || "",
   };
 }
