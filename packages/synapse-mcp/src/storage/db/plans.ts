@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
 import { createHash, randomUUID } from "crypto";
+import { sanitizeFts5Query } from "../../utils/fts5.js";
 import type {
   Plan,
   PlanMeta,
@@ -85,7 +86,7 @@ export class PlanStore {
         JOIN plans p ON p.rowid = fts.rowid
         WHERE plans_fts MATCH ?
       `;
-      params.push(query);
+      params.push(sanitizeFts5Query(query));
     } else {
       sql = `
         SELECT p.id, p.title, p.description, p.tags, p.domain, p.quality_score, p.purchase_count,

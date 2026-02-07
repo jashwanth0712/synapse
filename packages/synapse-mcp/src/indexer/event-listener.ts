@@ -1,7 +1,9 @@
-import { SorobanRpc, xdr } from "@stellar/stellar-sdk";
+import * as StellarSdk from "@stellar/stellar-sdk";
+const { rpc: SorobanRpc, xdr } = StellarSdk;
 import Database from "better-sqlite3";
 
 import { initIndexerDatabase } from "./schema.js";
+import { sanitizeFts5Query } from "../utils/fts5.js";
 import type { IPFSClient } from "../ipfs/client.js";
 import type { PlanSearchResult } from "../types.js";
 
@@ -249,7 +251,7 @@ export class SorobanEventIndexer {
       JOIN indexed_plans p ON p.rowid = fts.rowid
       WHERE indexed_plans_fts MATCH ?
     `;
-    const params: (string | number)[] = [query];
+    const params: (string | number)[] = [sanitizeFts5Query(query)];
 
     if (tags && tags.length > 0) {
       const placeholders = tags.map(() => "?").join(", ");

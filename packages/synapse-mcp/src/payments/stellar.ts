@@ -1,11 +1,12 @@
-import {
+import * as StellarSdk from "@stellar/stellar-sdk";
+const {
   Keypair,
   TransactionBuilder,
   Networks,
   Operation,
   Asset,
   Horizon,
-} from "@stellar/stellar-sdk";
+} = StellarSdk;
 
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
 

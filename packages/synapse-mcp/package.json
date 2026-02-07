@@ -1,6 +1,6 @@
 {
   "name": "@jashwanth0712/synapse-mcp",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "AI agent knowledge oracle with Stellar payments. Self-contained MCP server with embedded SQLite, full-text search, and on-chain verification (coming soon).",
   "type": "module",
   "main": "./dist/index.js",

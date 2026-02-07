@@ -1,4 +1,5 @@
-import { Keypair } from "@stellar/stellar-sdk";
+import * as StellarSdk from "@stellar/stellar-sdk";
+const { Keypair } = StellarSdk;
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { dirname } from "path";
 import { WALLET_PATH, CONFIG_DIR } from "../config.js";
