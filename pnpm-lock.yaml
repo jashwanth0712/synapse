@@ -23,6 +23,9 @@ importers:
       better-sqlite3:
         specifier: ^11.0.0
         version: 11.10.0
+      blobby-svg:
+        specifier: ^1.0.0
+        version: 1.0.0
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1304,6 +1307,9 @@ packages:
 
   bl@4.1.0:
     resolution: {integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==}
+
+  blobby-svg@1.0.0:
+    resolution: {integrity: sha512-GI+2FvuzNeA+XYeXuvGIDP9bZog77bffXz6EYcdOrltOV8zyIql89JPqQecnULqrsogt1JpZWKjw+Vo1xjiKkg==}
 
   body-parser@2.2.1:
     resolution: {integrity: sha512-nfDwkulwiZYQIGwxdy0RUmowMhKcFVcYXUU7m4QlKYim1rUtg83xm2yjZ40QjDuc291AJjjeSc9b++AWHSgSHw==}
@@ -4498,6 +4504,8 @@ snapshots:
       buffer: 5.7.1
       inherits: 2.0.4
       readable-stream: 3.6.2
+
+  blobby-svg@1.0.0: {}
 
   body-parser@2.2.1:
     dependencies:

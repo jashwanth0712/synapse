@@ -10,6 +10,7 @@ import {
   Database,
   Search,
   ArrowRightLeft,
+  BookOpen,
 } from "lucide-react";
 
 const navItems = [
@@ -19,6 +20,7 @@ const navItems = [
   { href: "/storage", label: "Storage", icon: Database },
   { href: "/search", label: "Search", icon: Search },
   { href: "/transactions", label: "Transactions", icon: ArrowRightLeft },
+  { href: "/docs", label: "Docs", icon: BookOpen },
 ];
 
 export function Sidebar() {
