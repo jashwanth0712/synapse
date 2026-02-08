@@ -5,6 +5,10 @@ node_modules/
 dist/
 *.tsbuildinfo
 
+
+# MCP config (contains secrets)
+.mcp.json
+
 # Environment
 .env
 .env.local

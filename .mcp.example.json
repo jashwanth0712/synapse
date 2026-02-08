@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "synapse-mcp": {
+      "command": "npx",
+      "args": ["@jashwanth0712/synapse-mcp"],
+      "env": {
+        "SYNAPSE_CONTRACT_ID": "YOUR_SOROBAN_CONTRACT_ID",
+        "SYNAPSE_IPFS_API_KEY": "YOUR_PINATA_API_KEY",
+        "SYNAPSE_IPFS_API_SECRET": "YOUR_PINATA_API_SECRET"
+      }
+    }
+  }
+}
