@@ -55,7 +55,7 @@ const sections = [
   { id: "tools", label: "MCP Tools" },
   { id: "cli", label: "CLI Commands" },
   { id: "config", label: "Configuration" },
-  { id: "storage", label: "Storage Modes" },
+  { id: "storage", label: "On-Chain Storage" },
   { id: "pricing", label: "Pricing" },
 ] as const;
 
@@ -502,11 +502,10 @@ export default function DocsPage() {
                     </thead>
                     <tbody className="text-gray-600">
                       {[
-                        ["SYNAPSE_STORAGE_MODE", "local", "Storage mode: local, soroban, or dual"],
                         ["STELLAR_SECRET_KEY", "auto-generated", "Use an existing Stellar keypair"],
-                        ["SYNAPSE_CONTRACT_ID", "\u2014", "Soroban contract address (soroban mode)"],
-                        ["SYNAPSE_IPFS_API_KEY", "\u2014", "Pinata API key (soroban mode)"],
-                        ["SYNAPSE_IPFS_API_SECRET", "\u2014", "Pinata API secret (soroban mode)"],
+                        ["SYNAPSE_CONTRACT_ID", "\u2014", "Soroban contract address"],
+                        ["SYNAPSE_IPFS_API_KEY", "\u2014", "Pinata API key for IPFS content storage"],
+                        ["SYNAPSE_IPFS_API_SECRET", "\u2014", "Pinata API secret"],
                         [
                           "SYNAPSE_SOROBAN_RPC_URL",
                           "soroban-testnet.stellar.org",
@@ -540,7 +539,6 @@ export default function DocsPage() {
       "command": "npx",
       "args": ["@jashwanth0712/synapse-mcp"],
       "env": {
-        "SYNAPSE_STORAGE_MODE": "soroban",
         "SYNAPSE_CONTRACT_ID": "CAWHVS..."
       }
     }
@@ -557,40 +555,36 @@ export default function DocsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Database className="h-5 w-5 text-purple-600" />
-                  Storage Modes
+                  On-Chain Storage
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="rounded-lg border p-4">
-                    <Badge className="mb-2">local</Badge>
-                    <p className="text-xs font-medium text-gray-900">Local SQLite</p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Self-contained with FTS5 full-text search. No external dependencies. Data
-                      stored in <code className="text-xs">~/.local/share/synapse-mcp</code>.
-                    </p>
-                    <p className="mt-2 text-xs font-medium text-green-600">Default &mdash; no config needed</p>
-                  </div>
-                  <div className="rounded-lg border p-4">
-                    <Badge variant="purple" className="mb-2">soroban</Badge>
-                    <p className="text-xs font-medium text-gray-900">On-Chain (Soroban)</p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Metadata on Stellar via Soroban, content on IPFS (Pinata), local SQLite
-                      indexer for search. Requires contract ID and IPFS keys.
-                    </p>
-                  </div>
-                  <div className="rounded-lg border p-4">
-                    <Badge variant="hot" className="mb-2">dual</Badge>
-                    <p className="text-xs font-medium text-gray-900">Dual</p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Writes to both local and Soroban simultaneously. Useful for migration and
-                      redundancy.
-                    </p>
+                <div className="rounded-lg border p-4">
+                  <Badge variant="purple" className="mb-2">soroban</Badge>
+                  <p className="text-sm font-medium text-gray-900">On-Chain (Soroban)</p>
+                  <p className="mt-2 text-sm text-gray-600">
+                    All plans are stored on-chain via Soroban smart contracts on the Stellar
+                    network. Plan metadata lives on Soroban, full content is pinned to IPFS
+                    (Pinata), and a local SQLite indexer powers full-text search.
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-md bg-gray-50 p-3">
+                      <p className="text-xs font-medium text-gray-900">Metadata</p>
+                      <p className="mt-0.5 text-xs text-gray-500">Stored on Stellar via Soroban</p>
+                    </div>
+                    <div className="rounded-md bg-gray-50 p-3">
+                      <p className="text-xs font-medium text-gray-900">Content</p>
+                      <p className="mt-0.5 text-xs text-gray-500">Pinned to IPFS via Pinata</p>
+                    </div>
+                    <div className="rounded-md bg-gray-50 p-3">
+                      <p className="text-xs font-medium text-gray-900">Search</p>
+                      <p className="mt-0.5 text-xs text-gray-500">Local SQLite FTS5 indexer</p>
+                    </div>
                   </div>
                 </div>
 
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                  <p className="text-sm font-medium text-blue-800">TTL Tiers (Soroban)</p>
+                  <p className="text-sm font-medium text-blue-800">TTL Tiers</p>
                   <p className="mt-1 text-xs text-blue-600">
                     On-chain plans are managed with TTL tiers: <strong>Hot</strong> (~31 days),{" "}
                     <strong>Cold</strong> (~15 days), <strong>Archive</strong> (~7 days). Plans are
